@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Gestão Pública Municipal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* --VARIÁVEIS DE DESIGN E RESET -- */
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-bg: #f8f9fa;
+            --dark-bg: #343a40;
+            --white-bg: #ffffff;
+            --text-color: #212529;
+            --subtle-text: #6c757d;
+            --border-radius: 12px;
+            --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            min-height: 100vh;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+        }
+        /* --SIDEBAR E NAVEGAÇÃO -- */
+        .sidebar {
+            width: 280px; background-color: var(--dark-bg);
+            color: var(--white-bg);
+            display: flex; flex-direction: column;
+            position: fixed; height: 100vh; left: 0;
+            padding: 2rem 0;
+            box-shadow: 2px 0 15px rgba(0,0,0,0.2);
+            overflow-y: auto;
+        }
+        .sidebar-header { text-align: center; margin-bottom: 2rem; }
+        .sidebar-header h1 { font-size: 1.8rem; font-weight: 700; color: var(--white-bg); }
+        .sidebar-nav ul { list-style: none; }
+        .sidebar-nav ul li { }
+        .sidebar-nav ul li a {
+            display: flex; align-items: center;
+            padding: 1rem 1.5rem;
+            font-size: 1rem; font-weight: 500;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .sidebar-nav ul li a i { margin-right: 1rem; font-size: 1.3rem; width: 20px; text-align: center; }
+        .sidebar-nav ul li a:hover,
+        .sidebar-nav ul li a.active {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--white-bg);
+            border-left: 4px solid var(--primary-color);
+        }
+        /* --MAIN CONTENT -- */
+        .main-content {
+            margin-left: 280px;
+            flex: 1;
+            padding: 2rem;
+            transition: margin-left 0.3s ease-in-out;
+        }
+        .content-section {
+            display: none;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+        .content-section.visible { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h2 {
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+            color: var(--text-color);
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+        /* --KPI CARDS -- */
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background-color: var(--white-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 2rem;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            display: flex; flex-direction: column;
+            justify-content: center;
+        }
+        .card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        }
+        .card h3 { margin-bottom: 0.5rem; font-weight: 500; color: var(--secondary-color); }
+        .card p.data-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin: 0.5rem 0;
+        }
+        .card span.data-label {
+            color: var(--subtle-text);
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+        /* --CHART CONTAINERS -- */
+        .chart-container {
+            background-color: var(--white-bg);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .chart-container:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+        }
+        .chart-container h4 { margin-bottom: 1rem; font-size: 1.25rem; }
+        /* --RELATÓRIOS E BOTÃO -- */
+        .reports-section {
+            background-color: var(--white-bg);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            border-top: 4px solid var(--primary-color);
+        }
+        .reports-section h3 { margin-bottom: 1rem; font-size: 1.5rem; }
+        .generate-report-button {
+            background-image: linear-gradient(45deg, var(--primary-color), #2980b9);
+            color: #fff;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+        }
+        .generate-report-button:hover {
+            background-image: linear-gradient(45deg, #2980b9, var(--primary-color));
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+        }
+        /* --MODAL -- */
+        .modal {
+            position: fixed;
+            top:0; left:0;
+            width:100%; height:100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: var(--white-bg);
+            padding: 2.5rem;
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 800px;
+            position: relative;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            animation: modalFadeIn 0.4s ease-out;
+        }
+        @keyframes modalFadeIn {
+            from { transform: scale(0.95) translateY(20px); opacity:0; }
+            to { transform: scale(1) translateY(0); opacity:1; }
+        }
+        .modal-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid #e9ecef;
+        }
+        .modal-header h3 { font-size: 1.5rem; margin:0; font-weight:700; color: var(--text-color); }
+        .close-button {
+            font-size: 2rem; font-weight:300; color: var(--subtle-text); cursor:pointer;
+            transition: color 0.2s;
+        }
+        .close-button:hover { color: var(--danger-color); }
+        .modal-body { font-size:1rem; line-height:1.7; color:#495057; }
+        .feedback-section { margin-top:2rem; padding-top:1.5rem; border-top:1px solid #e9ecef; }
+        .feedback-section h4 { margin-bottom:1rem; font-size:1.2rem; }
+        .feedback-section textarea {
+            width:100%; padding:1rem;
+            border:1px solid #ced4da; border-radius:8px;
+            font-size:0.9rem; min-height:100px; resize:vertical;
+            box-sizing:border-box; margin-bottom:0.5rem;
+        }
+        .feedback-section button {
+            background-color: var(--success-color);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .feedback-section button:hover {
+            background-color: #218838;
+        }
+        /* --RESPONSIVIDADE -- */
+        @media (max-width: 992px) {
+            body { flex-direction: column; }
+            .sidebar { width:100%; height:auto; position:relative; padding:1rem; flex-direction:row; align-items:center; flex-wrap:wrap; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+            .sidebar-header { display:none; }
+            .sidebar-nav { width:100%; order:2; margin-top:1rem; }
+            .sidebar-nav ul { display:flex; justify-content:space-around; flex-wrap:wrap; }
+            .sidebar-nav ul li a { padding:0.75rem; justify-content:center; border-left:none; border-bottom:3px solid transparent; }
+            .sidebar-nav ul li a.active { border-bottom-color: var(--primary-color); }
+            .sidebar-nav ul li a i { margin-right:0.5rem; }
+            .main-content { margin-left:0; padding:1.5rem; }
+            .cards-container { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header"><h1>Gestão Pública Municipal</h1></div>
+        <nav class="sidebar-nav">
+            <ul>
+                <li><a href="#inicio" class="active"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="#financas"><i class="fas fa-coins"></i> Finanças</a></li>
+                <li><a href="#saude"><i class="fas fa-heartbeat"></i> Saúde</a></li>
+                <li><a href="#educacao"><i class="fas fa-graduation-cap"></i> Educação</a></li>
+                <li><a href="#obras"><i class="fas fa-hard-hat"></i> Obras</a></li>
+                <li><a href="#meio-ambiente"><i class="fas fa-leaf"></i> Meio Ambiente</a></li>
+            </ul>
+        </nav>
+    </div>
+    <div class="main-content">
+        <!-- DASHBOARD GERAL -->
+        <section id="inicio" class="content-section visible">
+            <h2>Dashboard Geral</h2>
+            <div class="cards-container">
+                <div class="card">
+                    <h3>Arrecadação Bruta (Mensal)</h3>
+                    <p class="data-value">R$ 145,7 M</p>
+                    <span class="data-label">Meta: R$ 140 M</span>
+                </div>
+                <div class="card">
+                    <h3>Execução Orçamentária</h3>
+                    <p class="data-value">82%</p>
+                    <span class="data-label">Desp. vs. Orçamento Previsto</span>
+                </div>
+                <div class="card">
+                    <h3>Projetos de Infraestrutura</h3>
+                    <p class="data-value">42</p>
+                    <span class="data-label">Obras em Andamento</span>
+                </div>
+                <div class="card">
+                    <h3>Taxa de Evasão Escolar</h3>
+                    <p class="data-value">3,5%</p>
+                    <span class="data-label">Rede Municipal</span>
+                </div>
+                <div class="card">
+                    <h3>Cobertura Vacinal</h3>
+                    <p class="data-value">95%</p>
+                    <span class="data-label">Dose DTP (12 meses)</span>
+                </div>
+                <div class="card">
+                    <h3>Coleta Seletiva</h3>
+                    <p class="data-value">35%</p>
+                    <span class="data-label">Índice de Reciclagem</span>
+                </div>
+            </div>
+            <div class="chart-container">
+                <h4>Evolução das Receitas e Despesas (Últimos 6 meses)</h4>
+                <canvas id="geralChart"></canvas>
+            </div>
+        </section>
+        <!-- MÓDULO FINANÇAS -->
+        <section id="financas" class="content-section">
+            <h2>Finanças</h2>
+            <div class="module-dashboard">
+                <div class="chart-container">
+                    <h4>Composição da Receita (Último Mês)</h4>
+                    <canvas id="receitaChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h4>Execução das Despesas por Secretaria (YTD)</h4>
+                    <canvas id="despesaChart"></canvas>
+                </div>
+            </div>
+            <div class="reports-section">
+                <h3>Relatório de Gestão Financeira</h3>
+                <p>Análise da arrecadação, execução orçamentária e saúde financeira.</p>
+                <button class="generate-report-button" onclick="showReport('financas')">Gerar Análise</button>
+            </div>
+        </section>
+        <!-- MÓDULO SAÚDE -->
+        <section id="saude" class="content-section">
+            <h2>Saúde</h2>
+            <div class="module-dashboard">
+                <div class="chart-container">
+                    <h4>Atendimentos Mensais</h4>
+                    <canvas id="atendimentoChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h4>Indicadores de Saúde</h4>
+                    <canvas id="saudeIndicadoresChart"></canvas>
+                </div>
+            </div>
+            <div class="reports-section">
+                <h3>Relatório de Saúde</h3>
+                <p>Desempenho dos serviços, cobertura vacinal e eficiência.</p>
+                <button class="generate-report-button" onclick="showReport('saude')">Gerar Análise</button>
+            </div>
+        </section>
+        <!-- MÓDULO EDUCAÇÃO -->
+        <section id="educacao" class="content-section">
+            <h2>Educação</h2>
+            <div class="module-dashboard">
+                <div class="chart-container">
+                    <h4>Matrículas por Nível</h4>
+                    <canvas id="matriculasChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h4>Desempenho e Evasão</h4>
+                    <canvas id="educacaoIndicadoresChart"></canvas>
+                </div>
+            </div>
+            <div class="reports-section">
+                <h3>Relatório Educacional</h3>
+                <p>Análise de matrícula, desempenho e evasão escolar.</p>
+                <button class="generate-report-button" onclick="showReport('educacao')">Gerar Análise</button>
+            </div>
+        </section>
+        <!-- MÓDULO OBRAS -->
+        <section id="obras" class="content-section">
+            <h2>Obras e Infraestrutura</h2>
+            <div class="module-dashboard">
+                <div class="chart-container">
+                    <h4>Status dos Projetos</h4>
+                    <canvas id="obrasStatusChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h4>Investimento em Infraestrutura (R$ M)</h4>
+                    <canvas id="obrasInvestimentoChart"></canvas>
+                </div>
+            </div>
+            <div class="reports-section">
+                <h3>Relatório de Obras</h3>
+                <p>Acompanhamento de projetos, investimentos e prioridades.</p>
+                <button class="generate-report-button" onclick="showReport('obras')">Gerar Análise</button>
+            </div>
+        </section>
+        <!-- MÓDULO MEIO AMBIENTE -->
+        <section id="meio-ambiente" class="content-section">
+            <h2>Meio Ambiente</h2>
+            <div class="module-dashboard">
+                <div class="chart-container">
+                    <h4>Qualidade do Ar</h4>
+                    <canvas id="arChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h4>Gestão de Resíduos</h4>
+                    <canvas id="residuosChart"></canvas>
+                </div>
+            </div>
+            <div class="reports-section">
+                <h3>Relatório Ambiental</h3>
+                <p>Análise de qualidade do ar, reciclagem e sustentabilidade.</p>
+                <button class="generate-report-button" onclick="showReport('meio-ambiente')">Gerar Análise</button>
+            </div>
+        </section>
+    </div>
+    <!-- MODAL DE RELATÓRIO -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle"></h3>
+                <span class="close-button" onclick="hideReport()">&times;</span>
+            </div>
+            <div class="modal-body" id="modalBody"></div>
+            <div class="feedback-section">
+                <h4>Deixe seu feedback</h4>
+                <textarea id="feedbackTextarea" placeholder="Sua opinião é importante..."></textarea><br>
+                <button onclick="submitFeedback()">Enviar Feedback</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Dados dos relatórios
+        const reportsData = {
+            'financas': {
+                title: 'Análise Financeira Detalhada',
+                content: `
+                    <p><strong>Visão Geral:</strong> Arrecadação bruta de R$ 145,7 milhões, acima da meta. Execução orçamentária em 82%.</p>
+                    <p><strong>Recomendações Estratégicas:</strong> Modernização fiscal, monitoramento de investimentos, reserva de contingência.</p>
+                `
+            },
+            'saude': {
+                title: 'Análise da Saúde',
+                content: `
+                    <p><strong>Visão Geral:</strong> 45.000 atendimentos/mês; cobertura vacinal DTP de 95%; ocupação de leitos de 85%.</p>
+                    <p><strong>Recomendações Estratégicas:</strong> Expansão de leitos, telemedicina, foco na prevenção.</p>
+                `
+            },
+            'educacao': {
+                title: 'Análise Educacional',
+                content: `
+                    <p><strong>Visão Geral:</strong> 25.000 alunos; evasão de 3,5%; média de avaliação de 78%.</p>
+                    <p><strong>Recomendações Estratégicas:</strong> Busca ativa, formação docente, infraestrutura tecnológica.</p>
+                `
+            },
+            'obras': {
+                title: 'Análise de Obras',
+                content: `
+                    <p><strong>Visão Geral:</strong> 42 obras em andamento; investimento de R$ 85 milhões.</p>
+                    <p><strong>Recomendações Estratégicas:</strong> Pregão eletrônico, monitoramento com drones, manutenção preventiva.</p>
+                `
+            },
+            'meio-ambiente': {
+                title: 'Análise Ambiental',
+                content: `
+                    <p><strong>Visão Geral:</strong> 75% dos dias com qualidade do ar boa; reciclagem 35%; aterro com 88% de capacidade.</p>
+                    <p><strong>Recomendações Estratégicas:</strong> Reciclagem premiada, biodigestão, arborização urbana.</p>
+                `
+            }
+        };
+
+        // Renderiza gráficos conforme módulo selecionado
+        function renderCharts(module) {
+            // destrói charts existentes se houver
+            document.querySelectorAll('canvas').forEach(c => c.chart && c.chart.destroy());
+
+            switch (module) {
+                case 'inicio':
+                    new Chart(document.getElementById('geralChart'), {
+                        type: 'line',
+                        data: {
+                            labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                            datasets: [
+                                { label: 'Receitas (R$ M)', data: [130, 145, 138, 150, 145.7, 152], borderColor: varToRGB('--primary-color'), backgroundColor: varToRGBA('--primary-color', 0.1), fill: true, tension: 0.3 },
+                                { label: 'Despesas (R$ M)', data: [110, 125, 128, 135, 120.1, 130], borderColor: varToRGB('--danger-color'), backgroundColor: varToRGBA('--danger-color', 0.1), fill: true, tension: 0.3 }
+                            ]
+                        },
+                        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+                    });
+                    break;
+                case 'financas':
+                    new Chart(document.getElementById('receitaChart'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Tributária', 'Transferências', 'Outras'],
+                            datasets: [{ data: [102, 38, 5.7], backgroundColor: [varToRGB('--primary-color'), varToRGB('--success-color'), varToRGB('--warning-color')] }]
+                        },
+                        options: { responsive: true }
+                    });
+                    new Chart(document.getElementById('despesaChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: ['Educação', 'Saúde', 'Obras', 'Pessoal'],
+                            datasets: [{ label: 'Execução (%)', data: [75, 70, 55, 80], backgroundColor: [varToRGB('--info-color'), varToRGB('--danger-color'), varToRGB('--warning-color'), varToRGB('--secondary-color')] }]
+                        },
+                        options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
+                    });
+                    break;
+                case 'saude':
+                    new Chart(document.getElementById('atendimentoChart'), {
+                        type: 'line',
+                        data: {
+                            labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+                            datasets: [{ label: 'Atendimentos', data: [42000, 45000, 43500, 48000, 45500, 46000], borderColor: varToRGB('--info-color'), backgroundColor: varToRGBA('--info-color', 0.1), fill: true, tension:0.4 }]
+                        },
+                        options: { responsive: true }
+                    });
+                    new Chart(document.getElementById('saudeIndicadoresChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: ['Vacinação (%)', 'Ocupação de Leitos (%)', 'Mortalidade Infantil (‰)'],
+                            datasets: [{ label: 'Indicadores', data: [95, 85, 15], backgroundColor: [varToRGB('--success-color'), varToRGB('--warning-color'), varToRGB('--danger-color')] }]
+                        },
+                        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+                    });
+                    break;
+                case 'educacao':
+                    new Chart(document.getElementById('matriculasChart'), {
+                        type: 'pie',
+                        data: {
+                            labels: ['Fundamental', 'Infantil', 'Médio'],
+                            datasets: [{ data: [11250, 8750, 5000], backgroundColor: [varToRGB('--primary-color'), varToRGB('--success-color'), varToRGB('--warning-color')] }]
+                        },
+                        options: { responsive: true }
+                    });
+                    new Chart(document.getElementById('educacaoIndicadoresChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: ['Avaliação (%)', 'Evasão (%)'],
+                            datasets: [{ label: 'Indicadores', data: [78, 3.5], backgroundColor: [varToRGB('--info-color'), varToRGB('--danger-color')] }]
+                        },
+                        options: { responsive: true, scales: { y: { beginAtZero: true, max: 100 } } }
+                    });
+                    break;
+                case 'obras':
+                    new Chart(document.getElementById('obrasStatusChart'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Execução', 'Licitação', 'Concluídos'],
+                            datasets: [{ data: [21, 12, 9], backgroundColor: [varToRGB('--success-color'), varToRGB('--warning-color'), varToRGB('--secondary-color')] }]
+                        },
+                        options: { responsive: true }
+                    });
+                    new Chart(document.getElementById('obrasInvestimentoChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: ['Pavimentação', 'Saneamento', 'Iluminação'],
+                            datasets: [{ label: 'Investimento (R$ M)', data: [51, 21.25, 12.75], backgroundColor: [varToRGB('--primary-color'), varToRGB('--success-color'), varToRGB('--info-color')] }]
+                        },
+                        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+                    });
+                    break;
+                case 'meio-ambiente':
+                    new Chart(document.getElementById('arChart'), {
+                        type: 'pie',
+                        data: {
+                            labels: ['Bom', 'Moderado'],
+                            datasets: [{ data: [75, 25], backgroundColor: [varToRGB('--success-color'), varToRGB('--warning-color')] }]
+                        },
+                        options: { responsive: true }
+                    });
+                    new Chart(document.getElementById('residuosChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: ['Orgânicos (%)', 'Recicláveis (%)'],
+                            datasets: [{ label: 'Distribuição', data: [65, 35], backgroundColor: [varToRGB('--secondary-color'), varToRGB('--info-color')] }]
+                        },
+                        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+                    });
+                    break;
+            }
+        }
+        // Funções utilitárias para cores
+        function varToRGB(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+        function varToRGBA(name, alpha){ const rgb = varToRGB(name); /* assume rgb var */ return rgb.replace('rgb', 'rgba').replace(')', `, ${alpha})`); }
+        // Navegação entre seções
+        function navigateTo(id) {
+            document.querySelectorAll('.sidebar-nav ul li a').forEach(a => a.classList.remove('active'));
+            const link = document.querySelector(`.sidebar-nav ul li a[href="#${id}"]`);
+            link && link.classList.add('active');
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('visible'));
+            const s = document.getElementById(id); s && s.classList.add('visible'); renderCharts(id);
+        }
+        // Modal de relatório
+        function showReport(mod) {
+            const modal = document.getElementById('reportModal');
+            document.getElementById('modalTitle').innerText = reportsData[mod].title;
+            document.getElementById('modalBody').innerHTML = reportsData[mod].content;
+            modal.style.display = 'flex';
+        }
+        function hideReport() { document.getElementById('reportModal').style.display = 'none'; }
+        function submitFeedback() {
+            const ta = document.getElementById('feedbackTextarea');
+            if (ta.value.trim()) { alert('Obrigado pelo feedback!'); ta.value = ''; hideReport(); }
+            else alert('Digite seu feedback antes.');
+        }
+        window.onclick = function(event){
+            if (event.target === document.getElementById('reportModal')) hideReport();
+        }
+        document.querySelectorAll('.sidebar-nav ul li a').forEach(a => {
+            a.addEventListener('click', e => { e.preventDefault(); navigateTo(a.getAttribute('href').substring(1)); });
+        });
+        document.addEventListener('DOMContentLoaded', () => navigateTo('inicio'));
+    </script>
+</body>
+</html>
